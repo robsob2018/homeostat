@@ -1,0 +1,181 @@
+import type { Mission } from "../types/game";
+
+export const missions: Mission[] = [
+  {
+    id: "cold-morning",
+    title: "Zimny poranek",
+    description: "Organizm wychodzi na mróz. Skóra szybko traci ciepło, a podwzgórze uruchamia odpowiedzi ograniczające straty i zwiększające produkcję ciepła.",
+    initialState: {
+      temperature: 34,
+      glucose: 58,
+      oxygen: 66,
+      hydration: 64,
+      energy: 62,
+      stress: 26,
+      fatigue: 22,
+      stability: 0,
+    },
+    targetExplanation:
+      "zimno → termoreceptory skóry → OUN/podwzgórze → porównanie z nastawą → glikogen → drżenie, skurcz naczyń i izolacja",
+    recommendedActionIds: [
+      "activate-thermoreceptors",
+      "analyze-in-brain",
+      "check-homeostat",
+      "use-glycogen",
+      "shiver",
+      "constrict-vessels",
+      "put-on-clothes",
+    ],
+    dangerousActionIds: ["sweat", "drink-water", "dilate-vessels", "seek-shade", "ignore-signal"],
+    successCriteria: {
+      temperature: { min: 48, max: 66 },
+      energy: { min: 35 },
+      stability: { min: 62 },
+    },
+  },
+  {
+    id: "heat-dehydration",
+    title: "Upał i odwodnienie",
+    description: "Wysoka temperatura i wysiłek zwiększają obciążenie cieplne. Pot chłodzi przez parowanie, ale jednocześnie obniża zasoby płynów.",
+    initialState: {
+      temperature: 78,
+      glucose: 56,
+      oxygen: 58,
+      hydration: 32,
+      energy: 52,
+      stress: 44,
+      fatigue: 46,
+      stability: 0,
+    },
+    targetExplanation:
+      "upał → termoreceptory i sygnał pragnienia → OUN/podwzgórze → pot, rozszerzenie naczyń, woda i cień → feedback",
+    recommendedActionIds: [
+      "activate-thermoreceptors",
+      "activate-hydration-receptors",
+      "analyze-in-brain",
+      "check-homeostat",
+      "sweat",
+      "dilate-vessels",
+      "drink-water",
+      "seek-shade",
+      "rest",
+    ],
+    dangerousActionIds: ["put-on-clothes", "run", "work-muscles", "shiver", "constrict-vessels", "ignore-signal"],
+    successCriteria: {
+      temperature: { min: 48, max: 66 },
+      hydration: { min: 50 },
+      stability: { min: 60 },
+    },
+  },
+  {
+    id: "bus-run",
+    title: "Bieg na autobus",
+    description: "Nagły wysiłek podnosi zapotrzebowanie mięśni na tlen i ATP. Układ oddechowy, serce i zapasy glikogenu muszą zadziałać razem.",
+    initialState: {
+      temperature: 58,
+      glucose: 52,
+      oxygen: 34,
+      hydration: 61,
+      energy: 38,
+      stress: 48,
+      fatigue: 48,
+      stability: 0,
+    },
+    targetExplanation:
+      "wysiłek → sygnały z mięśni i oddechu → OUN → serce, płuca i glikogen → krótkotrwała praca mięśni",
+    recommendedActionIds: [
+      "sense-fatigue",
+      "analyze-in-brain",
+      "check-homeostat",
+      "breathe",
+      "speed-heart",
+      "use-glycogen",
+      "work-muscles",
+    ],
+    dangerousActionIds: ["ignore-signal", "overload-stimuli", "rest"],
+    successCriteria: {
+      oxygen: { min: 50 },
+      energy: { min: 35 },
+      fatigue: { max: 68 },
+      stability: { min: 55 },
+    },
+  },
+  {
+    id: "sugar-bomb",
+    title: "Słodka bomba",
+    description: "Po bardzo słodkim posiłku glukoza we krwi rośnie. Trzustka i tkanki przesuwają glukozę do zużycia lub magazynowania.",
+    initialState: {
+      temperature: 58,
+      glucose: 92,
+      oxygen: 64,
+      hydration: 61,
+      energy: 72,
+      stress: 28,
+      fatigue: 24,
+      stability: 0,
+    },
+    targetExplanation:
+      "wysoka glukoza → trzustka i sygnały metaboliczne → odpowiedź insulinowa → glikogen/tkanki → umiarkowany ruch",
+    recommendedActionIds: [
+      "detect-glucose",
+      "analyze-in-brain",
+      "check-homeostat",
+      "store-energy",
+      "moderate-walk",
+    ],
+    dangerousActionIds: ["eat-meal", "use-glycogen", "ignore-signal"],
+    successCriteria: {
+      glucose: { min: 48, max: 72 },
+      energy: { min: 45 },
+      stability: { min: 65 },
+    },
+  },
+  {
+    id: "exam-stress",
+    title: "Stres przed egzaminem",
+    description:
+      "Bodziec psychiczny i społeczny podnosi pobudzenie. Sterowanie dotyczy informacji, norm, relacji i zasobów psychofizycznych.",
+    initialState: {
+      temperature: 58,
+      glucose: 56,
+      oxygen: 46,
+      hydration: 58,
+      energy: 44,
+      stress: 84,
+      fatigue: 62,
+      stability: 0,
+    },
+    targetExplanation:
+      "presja społeczna → mózg odczytuje znaczenie bodźca → autonomiczna reakcja stresowa → oddech, plan, odpoczynek i wsparcie",
+    recommendedActionIds: [
+      "recognize-stress",
+      "sense-fatigue",
+      "analyze-in-brain",
+      "check-homeostat",
+      "breathe",
+      "calm-breathing",
+      "prepare-plan",
+      "talk-support",
+      "rest",
+    ],
+    dangerousActionIds: ["run", "speed-heart", "overload-stimuli", "ignore-signal"],
+    successCriteria: {
+      stress: { min: 15, max: 48 },
+      fatigue: { max: 55 },
+      oxygen: { min: 50 },
+      stability: { min: 62 },
+    },
+  },
+];
+
+export const tutorialSequence = [
+  "activate-thermoreceptors",
+  "analyze-in-brain",
+  "check-homeostat",
+  "use-glycogen",
+  "shiver",
+  "constrict-vessels",
+  "put-on-clothes",
+];
+
+export const missionById = (id: string) => missions.find((mission) => mission.id === id);
