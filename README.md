@@ -29,8 +29,9 @@ Po pushu na `main` aplikacja powinna być publikowana pod:
 https://robsob2018.github.io/homeostat/
 ```
 
-Jeśli pierwszy deploy zgłosi, że Pages nie jest włączone, ustaw w GitHub:
-`Settings → Pages → Build and deployment → Source: GitHub Actions`.
+Jeśli Pages nie jest jeszcze włączone, ustaw w GitHub:
+`Settings → Pages → Build and deployment → Source: Deploy from a branch`,
+branch `gh-pages`, folder `/ (root)`.
 
 ## Struktura
 
