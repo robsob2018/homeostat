@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BrainCircuit, Sparkles } from "lucide-react";
+import { Building2, HeartPulse, Sparkles } from "lucide-react";
 import { ActionPanel } from "./components/ActionPanel";
 import { BodyMap } from "./components/BodyMap";
 import { BodyStatsPanel } from "./components/BodyStatsPanel";
@@ -8,13 +8,10 @@ import { FeedbackPanel } from "./components/FeedbackPanel";
 import { GlossaryPanel } from "./components/GlossaryPanel";
 import { MissionPanel } from "./components/MissionPanel";
 import { SystemPathDiagram } from "./components/SystemPathDiagram";
-import { actions } from "./data/actions";
-import { failures } from "./data/failures";
-import { missions, tutorialSequence } from "./data/missions";
+import { WorldSelector } from "./components/WorldSelector";
 import { applyAction, buildScore, explainPart } from "./logic/gameEngine";
-import { criteriaMet, withStability } from "./logic/stability";
+import { criteriaMet, rangesFromParameters, withStability } from "./logic/stability";
 import type {
-  BodyState,
   CyberneticPart,
   FailureType,
   FeedbackItem,
@@ -22,32 +19,36 @@ import type {
   GameMode,
   Mission,
   ScoreSummary,
+  SystemState,
+  WorldDefinition,
+  WorldId,
 } from "./types/game";
+import { CityMap } from "./worlds/city/CityMap";
+import { worlds } from "./worlds/worlds";
 
-const STORAGE_KEY = "cyberorganizm-progress";
+const STORAGE_KEY = "cyber-system-progress";
 
-const normalizeInitialState = (mission: Mission): BodyState =>
-  withStability({
-    temperature: mission.initialState.temperature,
-    glucose: mission.initialState.glucose,
-    oxygen: mission.initialState.oxygen,
-    hydration: mission.initialState.hydration,
-    energy: mission.initialState.energy,
-    stress: mission.initialState.stress,
-    fatigue: mission.initialState.fatigue,
-  });
+const getWorld = (worldId: WorldId): WorldDefinition =>
+  worlds.find((world) => world.id === worldId) ?? worlds[0];
 
-const partFeedback: Record<CyberneticPart, string> = {
-  receptor: "Receptory są wejściem systemu. Bez nich organizm nie wie, jaki bodziec działa.",
-  correlator: "Korelator łączy sygnały z możliwymi reakcjami. To etap rozpoznania sensu informacji.",
-  homeostat: "Homeostat porównuje stan z zakresem równowagi i uruchamia korektę odchylenia.",
-  alimentator: "Alimentator dostarcza zasoby: tlen, wodę, jedzenie, sen i wsparcie psychofizyczne.",
-  accumulator: "Akumulator przechowuje rezerwy. Pomaga szybko, ale zasoby mogą się wyczerpać.",
-  effector: "Efektory wykonują reakcję. Dopiero feedback mówi, czy działanie pomogło.",
+const normalizeInitialState = (mission: Mission, world: WorldDefinition): SystemState => {
+  const ranges = rangesFromParameters(world.parameters);
+  const state = Object.fromEntries(
+    world.parameters
+      .filter((parameter) => parameter.id !== "stability")
+      .map((parameter) => [parameter.id, mission.initialState[parameter.id] ?? 50]),
+  );
+
+  return withStability(state, ranges);
 };
 
-function sortActionsForMission(actionList: GameAction[], mission: Mission, mode: GameMode) {
-  if (mode === "tutorial") {
+function sortActionsForMission(
+  actionList: GameAction[],
+  mission: Mission,
+  mode: GameMode,
+  tutorialSequence: string[],
+) {
+  if (mode === "tutorial" && tutorialSequence.length > 0) {
     const tutorialSet = new Set(tutorialSequence);
     return actionList
       .filter((action) => tutorialSet.has(action.id) || mission.dangerousActionIds.includes(action.id))
@@ -69,9 +70,17 @@ function sortActionsForMission(actionList: GameAction[], mission: Mission, mode:
 }
 
 function App() {
+  const [worldId, setWorldId] = useState<WorldId>("organism");
+  const world = useMemo(() => getWorld(worldId), [worldId]);
+  const tutorialSequence = world.tutorialSequence ?? [];
+  const tutorialEnabled = tutorialSequence.length > 0;
+  const optimalRanges = useMemo(() => rangesFromParameters(world.parameters), [world]);
+
   const [mode, setMode] = useState<GameMode>("tutorial");
   const [missionIndex, setMissionIndex] = useState(0);
-  const [bodyState, setBodyState] = useState(() => normalizeInitialState(missions[0]));
+  const [systemState, setSystemState] = useState<SystemState>(() =>
+    normalizeInitialState(world.missions[0], world),
+  );
   const [usedActionIds, setUsedActionIds] = useState<string[]>([]);
   const [usedParts, setUsedParts] = useState<CyberneticPart[]>([]);
   const [activePart, setActivePart] = useState<CyberneticPart | undefined>("homeostat");
@@ -84,8 +93,8 @@ function App() {
   const [failureIndex, setFailureIndex] = useState(0);
   const [diagnosis, setDiagnosis] = useState<FailureType | undefined>();
 
-  const currentMission = missions[missionIndex];
-  const failure = failures[failureIndex];
+  const currentMission = world.missions[missionIndex] ?? world.missions[0];
+  const failure = world.failures[failureIndex] ?? world.failures[0];
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -96,13 +105,17 @@ function App() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completedMissionIds));
   }, [completedMissionIds]);
 
+  useEffect(() => {
+    if (!tutorialEnabled && mode === "tutorial") setMode("missions");
+  }, [mode, tutorialEnabled]);
+
   const visibleActions = useMemo(
-    () => sortActionsForMission(actions, currentMission, mode),
-    [currentMission, mode],
+    () => sortActionsForMission(world.actions, currentMission, mode, tutorialSequence),
+    [currentMission, mode, tutorialSequence, world.actions],
   );
 
-  const resetMission = (nextMission = currentMission) => {
-    setBodyState(normalizeInitialState(nextMission));
+  const resetMission = (nextMission = currentMission, nextWorld = world) => {
+    setSystemState(normalizeInitialState(nextMission, nextWorld));
     setUsedActionIds([]);
     setUsedParts([]);
     setActivePart("homeostat");
@@ -113,38 +126,56 @@ function App() {
     setDiagnosis(undefined);
   };
 
-  const changeMode = (nextMode: GameMode) => {
+  const changeWorld = (nextWorldId: WorldId) => {
+    const nextWorld = getWorld(nextWorldId);
+    const nextMode: GameMode = nextWorld.tutorialSequence?.length ? "tutorial" : "missions";
+    setWorldId(nextWorldId);
     setMode(nextMode);
-    if (nextMode === "tutorial") {
+    setMissionIndex(0);
+    setFailureIndex(0);
+    resetMission(nextWorld.missions[0], nextWorld);
+  };
+
+  const changeMode = (nextMode: GameMode) => {
+    const resolvedMode = nextMode === "tutorial" && !tutorialEnabled ? "missions" : nextMode;
+    setMode(resolvedMode);
+    if (resolvedMode === "tutorial") {
       setMissionIndex(0);
-      resetMission(missions[0]);
+      resetMission(world.missions[0]);
     } else {
       resetMission(currentMission);
     }
   };
 
   const changeMission = (missionId: string) => {
-    const index = missions.findIndex((mission) => mission.id === missionId);
+    const index = world.missions.findIndex((mission) => mission.id === missionId);
     if (index === -1) return;
     setMissionIndex(index);
-    resetMission(missions[index]);
+    resetMission(world.missions[index]);
   };
 
   const nextMission = () => {
-    const nextIndex = (missionIndex + 1) % missions.length;
+    const nextIndex = (missionIndex + 1) % world.missions.length;
     setMissionIndex(nextIndex);
-    resetMission(missions[nextIndex]);
+    resetMission(world.missions[nextIndex]);
   };
 
   const addFeedback = (item: FeedbackItem) => {
     setFeedback((items) => [item, ...items].slice(0, 8));
   };
 
-  const completeMission = (state: BodyState, usedIds: string[]) => {
-    const summary = buildScore(normalizeInitialState(currentMission), state, currentMission, usedIds);
+  const completeMission = (state: SystemState, usedIds: string[]) => {
+    const summary = buildScore(
+      normalizeInitialState(currentMission, world),
+      state,
+      currentMission,
+      usedIds,
+      world.scoreResourceKey,
+      world.title,
+    );
     setCompleted(true);
     setScore(summary);
-    setCompletedMissionIds((ids) => Array.from(new Set([...ids, currentMission.id])));
+    setCompletedMissionIds((ids) => Array.from(new Set([...ids, `${world.id}:${currentMission.id}`])));
     addFeedback({
       id: `${Date.now()}-complete`,
       actionLabel: "Misja zakończona",
@@ -162,14 +193,14 @@ function App() {
     setUsedParts((parts) => Array.from(new Set([...parts, action.cyberneticPart])));
     setActivePart(action.cyberneticPart);
 
-    const result = applyAction(bodyState, action, currentMission, usedActionIds);
-    setBodyState(result.nextState);
+    const result = applyAction(systemState, action, currentMission, usedActionIds, optimalRanges);
+    setSystemState(result.nextState);
 
     if (mode === "tutorial" && expectedId && action.id !== expectedId) {
       addFeedback({
         id: `${Date.now()}-tutorial-miss`,
         actionLabel: action.label,
-        text: `To nie jest kolejny etap drogi bodźca. Teraz system oczekuje: ${actions.find((item) => item.id === expectedId)?.label}. Reakcja została wykonana, więc obserwuj koszt.`,
+        text: `To nie jest kolejny etap drogi bodźca. Teraz system oczekuje: ${world.actions.find((item) => item.id === expectedId)?.label}. Reakcja została wykonana, więc obserwuj koszt.`,
         tone: "bad",
       });
       return;
@@ -181,7 +212,10 @@ function App() {
 
     addFeedback(result.feedback);
 
-    const tutorialDone = mode === "tutorial" && action.id === tutorialSequence[tutorialSequence.length - 1];
+    const tutorialDone =
+      mode === "tutorial" &&
+      tutorialSequence.length > 0 &&
+      action.id === tutorialSequence[tutorialSequence.length - 1];
     const missionDone = mode === "missions" && criteriaMet(result.nextState, currentMission.successCriteria);
     if (!completed && (tutorialDone || missionDone || result.completed)) {
       completeMission(result.nextState, nextUsedIds);
@@ -193,43 +227,57 @@ function App() {
     addFeedback({
       id: `${Date.now()}-${part}`,
       actionLabel: explainPart(part),
-      text: partFeedback[part],
+      text: world.partFeedback[part],
       tone: "neutral",
     });
   };
 
   const handleNewFailure = () => {
-    setFailureIndex((index) => (index + 1) % failures.length);
+    setFailureIndex((index) => (index + 1) % world.failures.length);
     setDiagnosis(undefined);
   };
 
+  const HeaderIcon = world.id === "city" ? Building2 : HeartPulse;
+
   return (
-    <main className="app-shell">
+    <main className={`app-shell world-${world.id}`}>
       <header className="app-header">
         <div>
           <span className="eyebrow">Gra edukacyjna</span>
-          <h1>CyberOrganizm: Misja Homeostat</h1>
+          <h1>
+            {world.title}: {world.subtitle}
+          </h1>
           <p>
-            Zarządzaj organizmem jako układem autonomicznym: odbieraj bodźce, kojarz sygnały,
-            koryguj odchylenia i ucz się przez sprzężenie zwrotne.
-            To uproszczony model edukacyjny, a nie symulator diagnostyczny.
+            {world.description} Wspólny silnik pokazuje, że organizm i miasto można opisać jako
+            układy cybernetyczne z receptorami, korelatorem, homeostatem, zasobami, efektorami
+            i sprzężeniem zwrotnym.
           </p>
         </div>
         <div className="guide-strip" aria-label="Przewodnicy">
-          <span><BrainCircuit size={17} /> Kora</span>
-          <span><Sparkles size={17} /> Homeo</span>
+          <span>
+            <HeaderIcon size={17} /> {world.id === "city" ? "Ratusz" : "Kora"}
+          </span>
+          <span>
+            <Sparkles size={17} /> Homeo
+          </span>
+          <span>Receptor</span>
           <span>Akku</span>
-          <span>Alima</span>
-          <span>Efekto</span>
+          <span>Efektor</span>
         </div>
       </header>
 
+      <WorldSelector worlds={worlds} activeWorldId={world.id} onSelect={changeWorld} />
+
       <div className="top-layout">
-        <BodyMap activePart={activePart} onPartSelect={handlePartSelect} />
+        {world.theme.mapKind === "city" ? (
+          <CityMap activePart={activePart} onPartSelect={handlePartSelect} />
+        ) : (
+          <BodyMap activePart={activePart} onPartSelect={handlePartSelect} />
+        )}
         <div className="side-stack">
           <MissionPanel
             mode={mode}
-            missions={missions}
+            missions={world.missions}
             currentMission={currentMission}
             completed={completed}
             score={score}
@@ -238,6 +286,9 @@ function App() {
             onReset={() => resetMission()}
             onNext={nextMission}
             onTogglePath={() => setShowPath((value) => !value)}
+            tutorialEnabled={tutorialEnabled}
+            missionLabel={world.id === "city" ? "Misja miasta" : "Misja organizmu"}
+            scoreResourceLabel={world.scoreResourceLabel}
           />
           {mode === "failure" ? (
             <FailureDiagnosisPanel
@@ -253,7 +304,11 @@ function App() {
       </div>
 
       <div className="dashboard-grid">
-        <BodyStatsPanel state={bodyState} />
+        <BodyStatsPanel
+          state={systemState}
+          parameters={world.parameters}
+          title={world.id === "city" ? "Parametry miasta" : "Parametry organizmu"}
+        />
         {mode !== "failure" && (
           <ActionPanel
             actions={visibleActions}
@@ -263,7 +318,7 @@ function App() {
           />
         )}
         <FeedbackPanel feedback={feedback} />
-        <GlossaryPanel />
+        <GlossaryPanel entries={world.glossary} />
       </div>
     </main>
   );

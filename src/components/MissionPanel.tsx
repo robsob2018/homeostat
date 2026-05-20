@@ -12,6 +12,9 @@ type MissionPanelProps = {
   onReset: () => void;
   onNext: () => void;
   onTogglePath: () => void;
+  tutorialEnabled?: boolean;
+  missionLabel?: string;
+  scoreResourceLabel?: string;
 };
 
 export function MissionPanel({
@@ -25,13 +28,18 @@ export function MissionPanel({
   onReset,
   onNext,
   onTogglePath,
+  tutorialEnabled = true,
+  missionLabel = "Misja organizmu",
+  scoreResourceLabel = "Zużycie energii",
 }: MissionPanelProps) {
   return (
     <section className="panel mission-panel">
-      <div className="mode-tabs" aria-label="Tryby gry">
-        <button className={mode === "tutorial" ? "active" : ""} onClick={() => onModeChange("tutorial")}>
-          Samouczek
-        </button>
+      <div className={`mode-tabs ${tutorialEnabled ? "" : "compact-tabs"}`} aria-label="Tryby gry">
+        {tutorialEnabled && (
+          <button className={mode === "tutorial" ? "active" : ""} onClick={() => onModeChange("tutorial")}>
+            Samouczek
+          </button>
+        )}
         <button className={mode === "missions" ? "active" : ""} onClick={() => onModeChange("missions")}>
           Misje
         </button>
@@ -41,7 +49,7 @@ export function MissionPanel({
       </div>
 
       <div className="panel-heading">
-        <span className="eyebrow">{mode === "tutorial" ? "Droga bodźca" : mode === "failure" ? "Diagnostyka" : "Misja organizmu"}</span>
+        <span className="eyebrow">{mode === "tutorial" ? "Droga bodźca" : mode === "failure" ? "Diagnostyka" : missionLabel}</span>
         <h2>{mode === "failure" ? "Znajdź uszkodzony element" : currentMission.title}</h2>
       </div>
 
@@ -90,7 +98,7 @@ export function MissionPanel({
               <dd>{score.mistakes}</dd>
             </div>
             <div>
-              <dt>Zużycie energii</dt>
+              <dt>{scoreResourceLabel}</dt>
               <dd>{score.energyUsed}</dd>
             </div>
           </dl>

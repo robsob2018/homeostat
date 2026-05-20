@@ -33,6 +33,12 @@ body {
     linear-gradient(135deg, #06111f 0%, #0a1831 54%, #0d1226 100%);
 }
 
+@keyframes dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
 button,
 select {
   font: inherit;
@@ -96,6 +102,43 @@ button {
   white-space: nowrap;
 }
 
+.world-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.world-selector button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 70px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #f7fbff;
+  text-align: left;
+  transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.world-selector button:hover,
+.world-selector button.active {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.095);
+}
+
+.world-selector span {
+  display: grid;
+  gap: 3px;
+}
+
+.world-selector small {
+  color: var(--text-muted);
+}
+
 .eyebrow {
   color: var(--receptor);
   font-size: 0.76rem;
@@ -157,6 +200,155 @@ button {
 .body-panel {
   min-height: 690px;
   overflow: hidden;
+}
+
+.city-map-panel {
+  min-height: 690px;
+  overflow: hidden;
+}
+
+.city-map-wrap {
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) minmax(150px, 0.3fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.city-map {
+  width: 100%;
+  max-height: 610px;
+  filter: drop-shadow(0 24px 44px rgba(0, 0, 0, 0.28));
+}
+
+.city-base {
+  fill: url("#cityBase");
+  stroke: rgba(32, 215, 247, 0.24);
+  stroke-width: 2;
+}
+
+.city-road {
+  fill: none;
+  stroke: rgba(226, 240, 255, 0.3);
+  stroke-width: 19;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.city-road.main {
+  stroke-width: 28;
+  stroke: rgba(255, 209, 102, 0.26);
+}
+
+.city-road.ring {
+  stroke-width: 9;
+  stroke-dasharray: 12 12;
+}
+
+.city-flow {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 12 12;
+  filter: url("#cityGlow");
+  animation: dash 1.4s linear infinite;
+}
+
+.city-flow circle {
+  fill: currentColor;
+}
+
+.city-node {
+  cursor: pointer;
+  color: var(--homeostat);
+  outline: none;
+}
+
+.city-node.receptor,
+.city-flow.receptor {
+  color: var(--receptor);
+}
+
+.city-node.correlator,
+.city-flow.correlator {
+  color: var(--correlator);
+}
+
+.city-node.homeostat,
+.city-flow.homeostat {
+  color: var(--homeostat);
+}
+
+.city-node.alimentator,
+.city-flow.alimentator {
+  color: var(--alimentator);
+}
+
+.city-node.accumulator,
+.city-flow.accumulator {
+  color: var(--accumulator);
+}
+
+.city-node.effector,
+.city-flow.effector {
+  color: var(--effector);
+}
+
+.city-block {
+  fill: rgba(255, 255, 255, 0.08);
+  stroke: currentColor;
+  stroke-width: 3;
+  transition: transform 180ms ease, filter 180ms ease, opacity 180ms ease;
+  transform-origin: center;
+}
+
+.city-block.active,
+.city-node.active .city-block,
+.city-node:focus-visible .city-block {
+  filter: url("#cityGlow");
+  transform: translateY(-6px);
+}
+
+.city-roof {
+  fill: currentColor;
+  opacity: 0.72;
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.5;
+}
+
+.city-shadow {
+  fill: rgba(0, 0, 0, 0.24);
+  transition: opacity 180ms ease;
+}
+
+.city-shadow.active {
+  opacity: 0.5;
+}
+
+.city-node-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: #f7fbff;
+}
+
+.city-label {
+  fill: rgba(245, 251, 255, 0.9);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  paint-order: stroke;
+  stroke: rgba(6, 17, 31, 0.82);
+  stroke-width: 4px;
+  pointer-events: none;
+}
+
+.city-map-note {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  line-height: 1.42;
+  font-size: 0.88rem;
 }
 
 .z-anatomy-panel {
@@ -1012,6 +1204,10 @@ button {
   margin-bottom: 16px;
 }
 
+.mode-tabs.compact-tabs {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .select-label {
   display: block;
   color: var(--text-muted);
@@ -1129,6 +1325,11 @@ select {
 .stress { color: var(--effector); background-color: var(--effector); }
 .fatigue { color: #b3a0ff; background-color: #b3a0ff; }
 .stability { color: var(--homeostat); background-color: var(--homeostat); }
+.transport { color: #76e4f7; background-color: #76e4f7; }
+.trust { color: #66f08a; background-color: #66f08a; }
+.info { color: var(--receptor); background-color: var(--receptor); }
+.order { color: #f4df56; background-color: #f4df56; }
+.reserve { color: var(--accumulator); background-color: var(--accumulator); }
 
 .stat-icon.temp,
 .stat-icon.glucose,
@@ -1137,7 +1338,12 @@ select {
 .stat-icon.energy,
 .stat-icon.stress,
 .stat-icon.fatigue,
-.stat-icon.stability {
+.stat-icon.stability,
+.stat-icon.transport,
+.stat-icon.trust,
+.stat-icon.info,
+.stat-icon.order,
+.stat-icon.reserve {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -1373,7 +1579,8 @@ details small {
 @media (max-width: 1120px) {
   .app-header,
   .top-layout,
-  .dashboard-grid {
+  .dashboard-grid,
+  .city-map-wrap {
     grid-template-columns: 1fr;
   }
 
@@ -1408,6 +1615,7 @@ details small {
   }
 
   .body-map-wrap,
+  .world-selector,
   .score-box dl,
   .diagnosis-grid {
     grid-template-columns: 1fr;

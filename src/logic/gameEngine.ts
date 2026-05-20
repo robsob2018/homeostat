@@ -1,29 +1,27 @@
 import type {
-  BodyState,
   FeedbackItem,
   GameAction,
   Mission,
   ScoreSummary,
+  SystemState,
+  Threshold,
 } from "../types/game";
 import { clamp, criteriaMet, stabilityLabel, withStability } from "./stability";
 
 export const applyAction = (
-  state: BodyState,
+  state: SystemState,
   action: GameAction,
   mission: Mission,
   usedActionIds: string[],
-): { nextState: BodyState; feedback: FeedbackItem; completed: boolean } => {
-  const nextWithoutStability = {
-    temperature: clamp(state.temperature + (action.effects.temperature ?? 0)),
-    glucose: clamp(state.glucose + (action.effects.glucose ?? 0)),
-    oxygen: clamp(state.oxygen + (action.effects.oxygen ?? 0)),
-    hydration: clamp(state.hydration + (action.effects.hydration ?? 0)),
-    energy: clamp(state.energy + (action.effects.energy ?? 0)),
-    stress: clamp(state.stress + (action.effects.stress ?? 0)),
-    fatigue: clamp(state.fatigue + (action.effects.fatigue ?? 0)),
-  };
+  optimalRanges: Record<string, Threshold>,
+): { nextState: SystemState; feedback: FeedbackItem; completed: boolean } => {
+  const nextWithoutStability = { ...state };
+  Object.entries(action.effects).forEach(([key, delta]) => {
+    if (key === "stability") return;
+    nextWithoutStability[key] = clamp((state[key] ?? 0) + (delta ?? 0));
+  });
 
-  const calculatedState = withStability(nextWithoutStability);
+  const calculatedState = withStability(nextWithoutStability, optimalRanges);
   const nextState = {
     ...calculatedState,
     stability: clamp(calculatedState.stability + (action.effects.stability ?? 0)),
@@ -70,21 +68,23 @@ export const explainPart = (part: GameAction["cyberneticPart"]) => {
 };
 
 export const buildScore = (
-  initialState: BodyState,
-  currentState: BodyState,
+  initialState: SystemState,
+  currentState: SystemState,
   mission: Mission,
   usedActionIds: string[],
+  resourceKey = "energy",
+  systemName = "System",
 ): ScoreSummary => {
   const unique = Array.from(new Set(usedActionIds));
   const correct = unique.filter((id) => mission.recommendedActionIds.includes(id)).length;
   const mistakes = usedActionIds.filter((id) => mission.dangerousActionIds.includes(id)).length;
-  const energyUsed = Math.max(0, initialState.energy - currentState.energy);
+  const energyUsed = Math.max(0, (initialState[resourceKey] ?? 0) - (currentState[resourceKey] ?? 0));
   const efficient = currentState.stability >= 70 && energyUsed <= 35 && mistakes === 0;
   const comment = efficient
     ? "Bardzo dobra równowaga dynamiczna: reakcje były trafne i nie zużyły nadmiernie zasobów."
     : currentState.stability >= 60
-      ? "System wrócił do stabilności, ale warto ograniczyć koszt energetyczny albo liczbę nietrafnych reakcji."
-      : "Organizm nadal jest rozregulowany. Spróbuj przejść pełną drogę: receptor, korelator, homeostat, zasoby, efektor i feedback.";
+      ? "System wrócił do stabilności, ale warto ograniczyć koszt zasobów albo liczbę nietrafnych reakcji."
+      : `${systemName} nadal jest rozregulowany. Spróbuj przejść pełną drogę: receptor, korelator, homeostat, zasoby, efektor i feedback.`;
 
   return {
     stability: currentState.stability,

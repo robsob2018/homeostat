@@ -1,7 +1,7 @@
 import { BookOpen } from "lucide-react";
-import { glossary } from "../data/glossary";
+import type { GlossaryEntry } from "../types/game";
 
-export function GlossaryPanel() {
+export function GlossaryPanel({ entries }: { entries: GlossaryEntry[] }) {
   return (
     <section className="panel glossary-panel">
       <div className="panel-heading compact">
@@ -12,7 +12,7 @@ export function GlossaryPanel() {
         </h2>
       </div>
       <div className="glossary-list">
-        {glossary.map((entry) => (
+        {entries.map((entry) => (
           <details key={entry.term} className={entry.cyberneticPart ?? ""}>
             <summary>{entry.term}</summary>
             <p>{entry.definition}</p>

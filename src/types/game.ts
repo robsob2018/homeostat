@@ -6,7 +6,11 @@ export type CyberneticPart =
   | "accumulator"
   | "effector";
 
-export type BodyState = {
+export type WorldId = "organism" | "city";
+
+export type SystemState = Record<string, number>;
+
+export type BodyState = SystemState & {
   temperature: number;
   glucose: number;
   oxygen: number;
@@ -17,12 +21,32 @@ export type BodyState = {
   stability: number;
 };
 
+export type ParameterDefinition = {
+  id: string;
+  label: string;
+  optimalMin: number;
+  optimalMax: number;
+  tone?: string;
+};
+
+export type CyberneticPartDefinition = {
+  id: CyberneticPart;
+  label: string;
+  description: string;
+};
+
+export type WorldTheme = {
+  primary: string;
+  accent: string;
+  mapKind: "organism" | "city";
+};
+
 export type GameAction = {
   id: string;
   label: string;
   cyberneticPart: CyberneticPart;
   description: string;
-  effects: Partial<BodyState>;
+  effects: Partial<SystemState>;
   goodForMissionIds?: string[];
   badForMissionIds?: string[];
   feedbackGood?: string;
@@ -38,11 +62,11 @@ export type Mission = {
   id: string;
   title: string;
   description: string;
-  initialState: BodyState;
+  initialState: SystemState;
   targetExplanation: string;
   recommendedActionIds: string[];
   dangerousActionIds: string[];
-  successCriteria: Partial<Record<keyof BodyState, Threshold>>;
+  successCriteria: Partial<Record<string, Threshold>>;
 };
 
 export type GlossaryEntry = {
@@ -86,4 +110,22 @@ export type ScoreSummary = {
   mistakes: number;
   energyUsed: number;
   comment: string;
+};
+
+export type WorldDefinition = {
+  id: WorldId;
+  title: string;
+  subtitle: string;
+  description: string;
+  theme: WorldTheme;
+  parameters: ParameterDefinition[];
+  parts: CyberneticPartDefinition[];
+  missions: Mission[];
+  actions: GameAction[];
+  glossary: GlossaryEntry[];
+  failures: FailureCase[];
+  tutorialSequence?: string[];
+  scoreResourceKey?: string;
+  scoreResourceLabel?: string;
+  partFeedback: Record<CyberneticPart, string>;
 };
