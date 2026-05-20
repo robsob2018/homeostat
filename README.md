@@ -15,6 +15,23 @@ Build produkcyjny:
 npm run build
 ```
 
+## Deploy
+
+Publiczny deploy GitHub Pages jest przygotowany przez workflow:
+
+```txt
+.github/workflows/pages.yml
+```
+
+Po pushu na `main` aplikacja powinna być publikowana pod:
+
+```txt
+https://robsob2018.github.io/homeostat/
+```
+
+Jeśli pierwszy deploy zgłosi, że Pages nie jest włączone, ustaw w GitHub:
+`Settings → Pages → Build and deployment → Source: GitHub Actions`.
+
 ## Struktura
 
 ```txt
