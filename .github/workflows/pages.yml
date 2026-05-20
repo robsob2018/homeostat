@@ -40,9 +40,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git clone --depth 1 --branch gh-pages "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages-worktree || git clone --depth 1 "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages-worktree
           cd gh-pages-worktree
-          git checkout --orphan gh-pages-new
-          git rm -rf . || true
+          git checkout gh-pages || git checkout --orphan gh-pages
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -R ../dist/. .
-          git add .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No Pages changes to publish."
+            exit 0
+          fi
           git commit -m "deploy: publish github pages"
-          git push origin gh-pages-new:gh-pages --force
+          git push origin HEAD:gh-pages --force
